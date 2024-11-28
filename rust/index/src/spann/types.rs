@@ -23,7 +23,7 @@ use crate::{
     Index, IndexUuid,
 };
 
-use super::utils::KMeansAlgorithm;
+use super::utils::{rng_query, KMeansAlgorithm};
 
 pub struct VersionsMapInner {
     pub versions_map: HashMap<u32, u32>,
@@ -327,64 +327,16 @@ impl SpannIndexWriter {
         if self.distance_function == DistanceFunction::Cosine {
             normalized_query = normalize(query)
         }
-        let mut nearby_ids: Vec<usize> = vec![];
-        let mut nearby_distances: Vec<f32> = vec![];
-        let mut embeddings: Vec<Vec<f32>> = vec![];
-        {
-            let read_guard = self.hnsw_index.inner.read();
-            let allowed_ids = vec![];
-            let disallowed_ids = vec![];
-            let (ids, distances) = read_guard
-                .query(
-                    &normalized_query,
-                    NUM_CENTROIDS_TO_SEARCH as usize,
-                    &allowed_ids,
-                    &disallowed_ids,
-                )
-                .map_err(|_| SpannIndexWriterConstructionError::HnswIndexSearchError)?;
-            for (id, distance) in ids.iter().zip(distances.iter()) {
-                if *distance <= (1_f32 + QUERY_EPSILON) * distances[0] {
-                    nearby_ids.push(*id);
-                    nearby_distances.push(*distance);
-                }
-            }
-            // Get the embeddings also for distance computation.
-            for id in nearby_ids.iter() {
-                let emb = read_guard
-                    .get(*id)
-                    .map_err(|_| SpannIndexWriterConstructionError::HnswIndexSearchError)?
-                    .ok_or(SpannIndexWriterConstructionError::HnswIndexSearchError)?;
-                embeddings.push(emb);
-            }
-        }
-        // Apply the RNG rule to prune.
-        let mut res_ids = vec![];
-        let mut res_distances = vec![];
-        let mut res_embeddings: Vec<Vec<f32>> = vec![];
-        // Embeddings that were obtained are already normalized.
-        for (id, (distance, embedding)) in nearby_ids
-            .iter()
-            .zip(nearby_distances.iter().zip(embeddings))
-        {
-            let mut rng_accepted = true;
-            for nbr_embedding in res_embeddings.iter() {
-                let dist = self
-                    .distance_function
-                    .distance(&embedding[..], &nbr_embedding[..]);
-                if RNG_FACTOR * dist <= *distance {
-                    rng_accepted = false;
-                    break;
-                }
-            }
-            if !rng_accepted {
-                continue;
-            }
-            res_ids.push(*id);
-            res_distances.push(*distance);
-            res_embeddings.push(embedding);
-        }
-
-        Ok((res_ids, res_distances, res_embeddings))
+        rng_query(
+            &normalized_query,
+            self.hnsw_index.clone(),
+            NUM_CENTROIDS_TO_SEARCH as usize,
+            QUERY_EPSILON,
+            RNG_FACTOR,
+            self.distance_function.clone(),
+        )
+        .await
+        .map_err(|_| SpannIndexWriterConstructionError::HnswIndexSearchError)
     }
 
     async fn is_outdated(

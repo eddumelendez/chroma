@@ -340,9 +340,17 @@ impl ChromaError for SpannSegmentReaderError {
     }
 }
 
+#[derive(Debug)]
+pub struct SpannSegmentReaderContext {
+    pub segment: Segment,
+    pub blockfile_provider: BlockfileProvider,
+    pub hnsw_provider: HnswIndexProvider,
+    pub dimension: usize,
+}
+
 #[derive(Clone)]
 pub(crate) struct SpannSegmentReader<'me> {
-    index_reader: SpannIndexReader<'me>,
+    pub index_reader: SpannIndexReader<'me>,
     id: SegmentUuid,
 }
 
