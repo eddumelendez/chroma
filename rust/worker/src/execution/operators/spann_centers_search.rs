@@ -10,23 +10,23 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct SpannCentersSearchInput {
-    reader_context: SpannSegmentReaderContext,
+pub(crate) struct SpannCentersSearchInput {
+    pub(crate) reader_context: SpannSegmentReaderContext,
     // Assumes that query is already normalized in case of cosine.
-    query: Vec<f32>,
-    k: usize,
-    rng_epsilon: f32,
-    rng_factor: f32,
-    distance_function: DistanceFunction,
+    pub(crate) normalized_query: Vec<f32>,
+    pub(crate) k: usize,
+    pub(crate) rng_epsilon: f32,
+    pub(crate) rng_factor: f32,
+    pub(crate) distance_function: DistanceFunction,
 }
 
 #[derive(Debug)]
-pub struct SpannCentersSearchOutput {
-    center_ids: Vec<usize>,
+pub(crate) struct SpannCentersSearchOutput {
+    pub(crate) center_ids: Vec<usize>,
 }
 
 #[derive(Error, Debug)]
-pub enum SpannCentersSearchError {
+pub(crate) enum SpannCentersSearchError {
     #[error("Error creating spann segment reader")]
     SpannSegmentReaderCreationError,
     #[error("Error querying RNG")]
@@ -42,8 +42,8 @@ impl ChromaError for SpannCentersSearchError {
     }
 }
 
-#[derive(Debug)]
-pub struct SpannCentersSearchOperator {}
+#[derive(Debug, Clone)]
+pub(crate) struct SpannCentersSearchOperator {}
 
 impl SpannCentersSearchOperator {
     pub fn new() -> Box<Self> {
@@ -69,7 +69,7 @@ impl Operator<SpannCentersSearchInput, SpannCentersSearchOutput> for SpannCenter
         .map_err(|_| SpannCentersSearchError::SpannSegmentReaderCreationError)?;
         // RNG Query.
         let res = rng_query(
-            &input.query,
+            &input.normalized_query,
             spann_reader.index_reader.hnsw_index.clone(),
             input.k,
             input.rng_epsilon,

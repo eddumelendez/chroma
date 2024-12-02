@@ -12,26 +12,26 @@ use crate::execution::operator::Operator;
 use super::knn::RecordDistance;
 
 #[derive(Debug)]
-pub struct SpannBfPlInput {
+pub(crate) struct SpannBfPlInput {
     // Posting list data.
-    posting_list: Vec<SpannPosting>,
+    pub(crate) posting_list: Vec<SpannPosting>,
     // Number of results to return.
-    k: usize,
+    pub(crate) k: usize,
     // Bitmap of records to include/exclude.
-    filter: SignedRoaringBitmap,
+    pub(crate) filter: SignedRoaringBitmap,
     // Distance function.
-    distance_function: DistanceFunction,
+    pub(crate) distance_function: DistanceFunction,
     // Query embedding.
-    query: Vec<f32>,
+    pub(crate) query: Vec<f32>,
 }
 
 #[derive(Debug)]
-pub struct SpannBfPlOutput {
-    records: Vec<RecordDistance>,
+pub(crate) struct SpannBfPlOutput {
+    pub(crate) records: Vec<RecordDistance>,
 }
 
 #[derive(Error, Debug)]
-pub enum SpannBfPlError {}
+pub(crate) enum SpannBfPlError {}
 
 impl ChromaError for SpannBfPlError {
     fn code(&self) -> ErrorCodes {
@@ -39,11 +39,11 @@ impl ChromaError for SpannBfPlError {
     }
 }
 
-#[derive(Debug)]
-pub struct SpannBfPlOperator {}
+#[derive(Debug, Clone)]
+pub(crate) struct SpannBfPlOperator {}
 
 impl SpannBfPlOperator {
-    pub fn new() -> Box<Self> {
+    pub(crate) fn new() -> Box<Self> {
         Box::new(SpannBfPlOperator {})
     }
 }
